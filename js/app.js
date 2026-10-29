@@ -106,7 +106,6 @@
       '<div class="page">' +
         '<div class="page-head">' +
           '<h1 class="page-title" tabindex="-1">Invoices</h1>' +
-          (all.length ? '<a class="btn btn-primary" href="#/new">New invoice</a>' : '') +
         '</div>' +
         (all.length ?
           '<div class="list-tools">' +
@@ -259,7 +258,7 @@
           '<div class="page-head">' +
             '<h1 class="page-title" tabindex="-1">' + (existing ? esc(existing.number) : 'New invoice') + '</h1>' +
             '<p class="muted">' + (existing
-              ? 'Status: ' + esc(existing.status) + '. Last saved ' + esc(new Date(existing.updatedAt || existing.createdAt).toLocaleString())
+              ? esc(existing.status.charAt(0).toUpperCase() + existing.status.slice(1)) + ' - last saved ' + esc(new Date(existing.updatedAt || existing.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))
               : 'Will be numbered ' + esc(Calc.displayNumber(inv, s)) + ' when you save.') + '</p>' +
           '</div>' +
           (businessSetUp() ? '' :
@@ -306,12 +305,12 @@
           '</form>' +
         '</div>' +
         '<aside class="editor-preview" aria-label="Invoice preview">' +
-          '<h2 class="preview-title">Preview</h2>' +
+          '<h2 class="preview-title" tabindex="-1">Preview</h2>' +
           '<div id="preview" class="invoice-doc"></div>' +
         '</aside>' +
         '<div class="editor-bar" aria-hidden="false">' +
           '<span class="editor-bar-total"><span class="muted">Total</span> <strong id="bar-total"></strong></span>' +
-          '<a class="btn btn-secondary btn-small" href="#preview">Preview</a>' +
+          '<button type="button" class="btn btn-secondary btn-small" data-action="scroll-preview">Preview</button>' +
           '<button type="submit" form="invoice-form" class="btn btn-primary btn-small">Save</button>' +
         '</div>' +
       '</div>';
@@ -822,6 +821,7 @@
         }
         break;
       }
+      case 'scroll-preview': { var pt = $('.preview-title'); if (pt) { pt.scrollIntoView(); pt.focus({ preventScroll: true }); } break; }
       case 'discard-draft': state.draft = null; persist(); render(); toast('Discarded the unsaved changes.'); break;
       case 'print': ev.preventDefault(); printInvoice(); break;
       case 'copy-summary': copySummary(); break;
@@ -892,4 +892,5 @@
     showBanner('This browser is blocking site storage, so your invoices will disappear when you close this tab. Allow site data for this page to keep them.');
   }
   render();
+  document.documentElement.classList.remove('loading');
 })();
