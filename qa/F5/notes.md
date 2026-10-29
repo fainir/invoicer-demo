@@ -106,3 +106,30 @@ missing and invalid client email handling with focus, keyboard path, no console 
 One minor defect filed:
 
 | D | F5: After I tap Copy summary with the buttons near the bottom of the screen, the black message pops up on top of Copy summary and Email invoice, so I have to close it or wait 7 seconds before I can tap Email invoice | web 375 + desktop | todo | qa/F5/2026-10-29-02-copy-toast-1440.png | |
+
+## Round 2 (2026-10-29, commit d7c91f9)
+
+Re-test after the fix "toasts now appear at the top of the screen so they never cover the Copy summary / Email invoice buttons or the footer". Same surface and driver as round 1 (Playwright through scripts/browser.py, headless Chromium, context permissions clipboard-read + clipboard-write, fresh context per width, 1440x900 and 375x812). 62 checks, 0 failed, plus a separate header probe at both widths.
+
+Result: the round-1 defect is fixed (the toast no longer covers the share buttons or the footer), and every round-1 scenario still passes. NOT verified at 375: the toast now sits on top of the header links (Invoices, Settings, New invoice) whenever the page is at the top. Defect row below.
+
+What I did and what I saw:
+
+1. Settings (Jane Doe Design, jane@example.com, tax 10), invoice INV-0001 for Acme Studio / billing@acme.com with "Logo design" 2 x 150 and "Brand guidelines" 1 x 400, 10% discount, tax pre-filled with 10, note. Saved (bar Save button at 375): title "INV-0001 - Invoicer", "Draft - last saved ...".
+2. Fix check. Scrolled so the share buttons sit at the bottom edge of the usable viewport (1440: buttons y 796-840 of 900; 375: buttons y 647-691 with "Back to invoices" under them and the bar at 751-812), clicked Copy summary. Toast "Summary copied. Mark INV-0001 as sent?" with Mark as sent, at y 12-72 (1440, x 470-970) and y 12-78 (375, x 16-359, two text lines), opacity 1, z-index 50. elementFromPoint at the centres of Copy summary and Email invoice returns those buttons, and at the centre of Mark as sent returns that button. Screenshots 2026-10-29-r2-copy-toast-bottom-1440.png and -375.png (looked at: toast at the top, both share buttons and the footer / bottom bar clear).
+3. Clipboard text identical to round 1, byte for byte, at both widths (Issued Oct 29, 2026, Due Nov 12, 2026, $693.00 total). Mark as sent: "INV-0001 marked as sent.", "Sent - last saved", list row Sent. Copy again on the sent invoice: "Summary copied." with no button, clipboard unchanged.
+4. Email invoice href: mailto:billing@acme.com, subject "Invoice INV-0001 from Jane Doe Design", body equal to the clipboard text with CRLF line breaks only, no raw spaces or newlines. Clicking it: page stays on #/edit/<id> with the form, toast "Opening your email app.", one headless requestfailed for the mailto: URL (expected), nothing else.
+5. Client email emptied, Email invoice: toast "Add a valid client email first, or copy the summary instead.", focus in the Client email field, page stays, href "mailto:?subject=..." with no address. "nope": same toast and focus. Both widths.
+6. Unsaved #/new ("Will be numbered INV-0002 when you save."), Beta Co, Consulting 3 x 80, Copy summary: "Summary copied." with no offer, clipboard identical to round 1 (no discount or notes lines), still on #/new.
+7. Keyboard, both widths (invoice set back to Draft from the list first): Copy summary and Email invoice 44 px tall and inside the viewport; Notes, Tab x3 = Save invoice, Download PDF, Copy summary; with the buttons scrolled to the bottom edge, Enter: toast with the offer at the top, buttons still hit-testable; Tab x5 (1440) / x7 (375) reaches Mark as sent with the toast still up and a 3 px rgb(255,253,248) ring; Enter: "INV-0001 marked as sent.", "Sent - ...", focus on the H1 at y 85 / 83.
+8. Header probe (what the top toast covers when the page is at the top). 1440: the toast (x 470-970 or 590-850) never touches the header links (x 952-1264); tapping New invoice while a toast shows opens #/new. 375, list page right after a status change (scrollY 0): toast x 57-318, y 12-72 lies over Invoices, Settings and the New invoice button (their centres hit the toast text or its X). A tap at the centre of New invoice hit the toast's X: the toast closed and the page stayed on #/invoices; the same tap after closing the toast opened #/new. 375, editor at the top right after Save or after Copy summary: toast x 89-286 covers Invoices and Settings, New invoice is still reachable. Screenshot 2026-10-29-r2-toast-covers-nav-375.png (looked at: the black toast sits over the header, only the burger icon and the right edge of the New invoice button are visible).
+9. Console / page errors / failed requests: none besides the headless mailto in step 4 (one per width).
+
+Observations (no defect):
+- The toast fades in over 200 ms (toast-in); a screenshot taken at once shows it at y 4 and translucent. Settled values are above.
+- At 1440 the toast overlaps the sticky "Preview" heading in the right column; the toast is on top (Mark as sent inside the overlap is hit-testable).
+- When the page is scrolled down, the header is off screen and the toast covers only the form content under it, which is not interactive at the top of the viewport in the cases tested.
+
+## Defects (round 2)
+
+| D | F5: On my phone, right after I save, change a status or copy the summary, the black message sits on top of the Invoices / Settings / New invoice links at the top of the page for 7 seconds; tapping New invoice there only closes the message (and Invoices / Settings do nothing) until I close it or wait | web 375 | todo | qa/F5/2026-10-29-r2-toast-covers-nav-375.png | |

@@ -88,6 +88,7 @@
       var active = r.view === 'editor' ? key === 'new' : key === r.view;
       if (active) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
+    if (editor && draftTimer) saveDraftNow();
     editor = null;
     settingsForm = null;
     if (r.view === 'editor') renderEditor(r.id);
@@ -477,6 +478,10 @@
     state.draft = { forId: editor.id, invoice: Calc.deepCopy(editor.invoice), savedAt: Date.now() };
     persist();
   }
+  function cancelDraftSave() {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+  }
   function scheduleDraftSave() {
     clearTimeout(draftTimer);
     draftTimer = setTimeout(saveDraftNow, 250);
@@ -551,7 +556,7 @@
       state.invoices.push(inv);
     }
     state.draft = null;
-    clearTimeout(draftTimer);
+    cancelDraftSave();
     editor.id = inv.id;
     var saved = persist();
     if (saved) toast('Saved ' + inv.number + '.');
@@ -739,12 +744,14 @@
       invoicePrefix: String(s.invoicePrefix || ''),
       nextNumber: parseInt(s.nextNumber, 10)
     };
-    settingsForm = null;
     if (persist()) {
+      settingsForm = null;
       toast('Settings saved.');
       renderSettings();
       var saveBtn = $('#settings-form button[type=submit]');
       if (saveBtn) saveBtn.focus();
+    } else {
+      settingsForm.settings = Calc.deepCopy(state.settings);
     }
   }
 
@@ -763,11 +770,17 @@
   }
 
   function applyBackup(data) {
+    var draft = state.draft;
+    var keepDraft = draft && (draft.forId === null || data.invoices.some(function (i) { return i.id === draft.forId; }));
+    data.draft = keepDraft ? draft : null;
     state = data;
     settingsForm = null;
     pendingDelete = null;
-    if (persist()) {
-      renderSettings();
+    var ok = persist();
+    renderSettings();
+    var h = $('h1', main);
+    if (h) h.focus();
+    if (ok) {
       toast('Restored ' + data.invoices.length + (data.invoices.length === 1 ? ' invoice' : ' invoices') + ' and your settings.');
     }
   }
@@ -797,7 +810,7 @@
       if (n || businessSetUp()) {
         openDialog({
           title: 'Replace your current data?',
-          text: 'Restoring this backup replaces your settings' + (n ? ' and the ' + n + (n === 1 ? ' invoice' : ' invoices') + ' in this browser' : '') + ' with the ' + data.invoices.length + (data.invoices.length === 1 ? ' invoice' : ' invoices') + ' in the file. Download a backup of the current data first if you might need it.',
+          text: 'This browser holds your settings' + (n ? ' and ' + n + (n === 1 ? ' invoice' : ' invoices') : ' and no invoices') + '. Restoring replaces them with the backup (' + data.invoices.length + (data.invoices.length === 1 ? ' invoice' : ' invoices') + ' and its settings). An invoice you are still writing is kept. Download a backup of the current data first if you might need it.',
           confirmLabel: 'Replace with the backup',
           trigger: input
         }, function () { applyBackup(data); });
@@ -883,7 +896,7 @@
         break;
       }
       case 'scroll-preview': { var pt = $('.preview-title'); if (pt) { pt.scrollIntoView(); pt.focus({ preventScroll: true }); } break; }
-      case 'discard-draft': state.draft = null; persist(); render(); toast('Discarded the unsaved changes.'); break;
+      case 'discard-draft': cancelDraftSave(); state.draft = null; persist(); render(); toast('Discarded the unsaved changes.'); break;
       case 'print': ev.preventDefault(); printInvoice(); break;
       case 'copy-summary': copySummary(); break;
       case 'email':

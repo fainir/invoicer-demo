@@ -256,6 +256,7 @@ input[type="date"] { min-width: 0; }
 .doc-items th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); border-bottom: 1px solid #1d1b16; }
 .doc-items .num { text-align: right; white-space: nowrap; }
 .doc-items td:first-child { word-break: break-word; }
+.doc-from, .doc-billto, .doc-notes, .doc-foot { min-width: 0; overflow-wrap: anywhere; }
 .doc-empty { color: var(--ink-3); font-style: italic; }
 .doc-totals { display: flex; justify-content: flex-end; margin-bottom: var(--space-6); }
 .doc-totals dl { margin: 0; width: 100%; max-width: 280px; }
@@ -295,6 +296,7 @@ input[type="date"] { min-width: 0; }
 .toast-close { background: transparent; border: 0; color: var(--paper-2); font-size: 22px; line-height: 1; width: var(--control-h); height: var(--control-h); border-radius: var(--radius); cursor: pointer; }
 .toast-close:hover { background: rgba(255, 255, 255, 0.12); }
 .toast :focus-visible { outline-color: var(--paper-2); }
+@media (max-width: 899px) { .toast { top: calc(env(safe-area-inset-top, 0px) + 68px); } }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 /* Dialog */

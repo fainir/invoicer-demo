@@ -23,3 +23,25 @@ Date: 2026-10-29. Commit: 524f5ab. Surface: http://127.0.0.1:8080/ in headless C
 ## Files
 
 settings-1440, editor-saved-1440, after-print-1440, after-print-375, print-1440, print-375, print-unsaved-1440, print-fresh-1440, print-fresh-375, invoice.pdf, pdf-page1, editor-40-1440, print-40-1440, invoice-40-items.pdf, pdf40-page1..3 (all prefixed 2026-10-29-).
+
+## Round 2 (2026-10-29, commit d7c91f9)
+
+Re-test after the fix "the invoice number is the document title on any print, including Cmd+P". Same surface and driver as round 1 (Playwright through scripts/browser.py, headless Chromium, fresh context per run, 1440x900 and 375x812). 55 checks, 0 failed.
+
+Result: verified at both widths. The round-1 defect (Cmd+P suggested "INV-0001 - Invoicer.pdf") is fixed.
+
+What I did and what I saw:
+
+1. Fresh user, Settings with name, two-line address, email, tax 10 and a 120x48 PNG logo (stored as a data: URL), then a 3-line invoice with 10% discount and two-line notes, saved as INV-0001 (title "INV-0001 - Invoicer"). Both widths.
+2. Download PDF button: window.print(), beforeprint and afterprint hooks logged the title as exactly "INV-0001" at print() and at beforeprint, "INV-0001 - Invoicer" at afterprint and 2.3 s later. Both widths.
+3. Fix check, Cmd+P path (window.print() NOT started by the button, 2 s after the previous print so Chromium does not throttle it): beforeprint title "INV-0001", afterprint and final title "INV-0001 - Invoicer". Dispatching the bare events gives the same: after beforeprint the title is "INV-0001", after afterprint it is back. Two beforeprints followed by one afterprint still end restored; a stray afterprint with no beforeprint leaves the title alone. Both widths.
+4. Unsaved invoice on #/new (client "Beta Co" typed): the button and Cmd+P both print with the title "INV-0002" and restore "New invoice - Invoicer"; the print page shows INV-0002 and Beta Co and nothing else; the page stays on #/new. Both widths.
+5. Invoice list page, Cmd+P: the title stays "Invoices - Invoicer" through beforeprint and afterprint (no invoice number borrowed from an invoice opened earlier). Both widths.
+6. Print media (emulated): header, nav, form, footer, mobile bar, toast, "Preview" heading, banner, skip link, dialog and notices all have no box; body text equals the invoice text (542 chars); scrollWidth 1440 / 375, nothing clipped; the logo is 120x48 and loaded. Screenshots 2026-10-29-r2-print-1440.png and 2026-10-29-r2-print-375.png (looked at: logo, business block, INVOICE, number and dates, bill-to, 3 rows, totals $930.60, notes, footer line; at 375 the header stacks and the table still fits). Emulating screen again brings the UI back.
+7. page.pdf (A4, backgrounds): 1 page, 596x843 pt, 1 embedded image, all invoice text extractable. Same from the 375 viewport.
+8. 40-line invoice typed through the editor (row 21 has a 230-character description), 10% discount, 3-line notes: PDF has 3 pages, rows 1-15 / 16-36 / 37-40; the DESCRIPTION/QTY/UNIT PRICE/AMOUNT header is on every page; every row's description and amount are on the same page (none split); the long description wraps inside its row on page 2; totals, the three notes lines and the footer are on page 3. 2026-10-29-r2-pdf40-page1-1440.png (looked at: page 1 ends cleanly after row 15 with margin left over).
+9. Brand-new user with no settings, 375, straight to New invoice, Download PDF: title "INV-0001" at print time, restored after, no errors.
+10. Console errors/warnings, page errors, failed requests: none in any run.
+
+Observations (no defect):
+- Chromium logs the warning "Ignoring too frequent calls to print()" and shows no second dialog when print() is called again within about a second (my first script run did this; a user double-clicking Download PDF gets one dialog and no error).

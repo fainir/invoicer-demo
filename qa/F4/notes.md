@@ -33,3 +33,24 @@ Extra unhappy paths (375, same build):
 3. A reload inside the undo window loses the undo (the delete is saved immediately).
 4. A spaces-only search switches the summary to "N of N invoices match" instead of the normal summary.
 5. At 375 the toast floats over the bottom row for 7 s; it is dismissable with the x or Escape.
+
+## Round 2 (2026-10-29, commit d7c91f9)
+
+Re-test after the fix "a spaces-only search no longer reports N of N match". Same surface and driver as round 1 (Playwright through scripts/browser.py, headless Chromium, fresh context per width, 375x812 and 1440x900, everything driven through the real UI). 84 checks, 42 per width, 0 failed.
+
+Result: verified at both widths. The round-1 observation 4 (spaces-only search) is fixed. One cross-flow observation at 375 (toast over the header links) is filed under F5, where the toast move was made.
+
+What I did and what I saw:
+
+1. Fresh user, #/invoices: "No invoices yet", "Create your first invoice...", Create an invoice button, Settings tip, no search box and no summary. The button opens #/new.
+2. Settings saved, INV-0001 Acme Studio $550.00, INV-0002 Northwind Traders $214.50 (two lines), INV-0003 Blue Harbour Consulting $396.00 through the editor. List newest first, every row with number, client, "Due Nov 12, 2026", total, Draft select, Open / Duplicate / Delete; "3 invoices, 3 not paid yet".
+3. INV-0002 to Sent and INV-0001 to Paid through the selects: toasts, blue and green row classes, "3 invoices, 2 not paid yet", all kept after reload. Due date before the issue date refused with "The due date cannot be before the issue date." and nothing saved (row still Nov 12, no badge). Issue 2 weeks ago + due last week on INV-0002 and INV-0001: OVERDUE badge on the sent INV-0002 only, none on the paid INV-0001 or on INV-0003, statuses untouched. 2026-10-29-r2-list-overdue-375.png (looked at: badge under the Northwind due date, blue Sent, green Paid; the "Saved INV-0001." toast from the editor is still showing at the top over the header, see F5 round 2).
+4. Duplicate INV-0001: INV-0004 first, Draft, Acme Studio, $550.00, issued today, due in 7 days (the original's span), identical items; the original is byte-identical before and after; "4 invoices, 3 not paid yet"; toast "Duplicated as INV-0004." with Open, which loads the duplicate's editor (h1 INV-0004, client Acme Studio).
+5. Delete INV-0003: row gone at once, "3 invoices, 2 not paid yet", toast with Undo; Undo after 2 s: "Restored INV-0003.", row back in position 2, 4 invoices in storage. Deleted again, after 8 s the toast is gone and after a reload the invoice is gone, "3 invoices, 2 not paid yet".
+6. Search typed into the box: "nor" and "0002" give Northwind, "paid" gives INV-0001, "sent" gives INV-0002, each "1 of 3 invoices match"; "  ACME " gives INV-0004 and INV-0001, "2 of 3 invoices match"; "zzz" gives no rows, "0 of 3 invoices match", the box 'No invoices match "zzz". Try a number like INV-0001, part of the client name, or a status.' with Clear search, which empties and focuses the box, shows all rows and "3 invoices, 2 not paid yet". Reload with "north" typed: the box comes back empty with all rows. Delete inside the "north" filter: no-match box, "0 of 2 invoices match", Undo brings the row back into the filtered view with the search kept.
+   Fix check: three spaces in the box show all three rows with the normal "3 invoices, 2 not paid yet" line, a single space the same; "  nor" still filters to Northwind ("1 of 3 invoices match"); deleting back to spaces only returns the normal line. 2026-10-29-r2-spaces-search-1440.png and -375.png (looked at: box with the spaces and the native clear x, normal summary, three rows).
+7. Keyboard from the INV-0004 number link: Tab goes status select, Open, Duplicate, Delete, INV-0002's number link, every stop :focus-visible with a solid 3 px outline; "p" on the focused select marks INV-0004 Paid with its toast; Escape closes the toast; Enter on the number link opens the editor.
+8. 375 with a 78-character client name on INV-0004: page scrollWidth 375, every row inside its box, right edge 359, the client name ellipsised, selects and buttons 44 px, search box 46 px.
+9. Deleting the remaining three: the empty state (no Settings tip, business is set up) appears right after the last Delete with "Deleted INV-0001." and Undo still offered; after 8 s and a reload the list is empty and storage holds 0 invoices.
+10. Toast on the list now sits at the top: 1440 x 590-850, 375 x 58-317, y 12-72 at both; the search box is never covered. At 375 it covers the header links Invoices, Settings and New invoice while the page is at the top (measured here and reproduced with a tap in F5 round 2; filed there as a D row with qa/F5/2026-10-29-r2-toast-covers-nav-375.png). Round-1 observation 5 (toast over the bottom row at 375) no longer applies.
+11. Console errors/warnings, page errors, failed requests: none at either width.

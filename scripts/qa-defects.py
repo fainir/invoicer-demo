@@ -102,3 +102,60 @@ with open_page(375, 812) as (page, errors):
 
 fails = [k for k, v in results.items() if v.startswith("FAIL")]
 print("\nSUMMARY:", f"{len(results) - len(fails)}/{len(results)} pass", ("FAILS: " + ", ".join(fails)) if fails else "")
+
+# ---- Round 2 (D12-D19) ----
+def nav_free(page, label):
+    el = page.get_by_role("link", name=label).first
+    b = el.bounding_box()
+    hit = page.evaluate("([x,y]) => { var e = document.elementFromPoint(x, y); return e ? (e.closest('a') ? e.closest('a').textContent.trim() : e.tagName) : 'none'; }", [b["x"] + b["width"] / 2, b["y"] + b["height"] / 2])
+    return hit == label, hit
+
+with open_page(375, 812) as (page, errors):
+    setup(page)
+    page.wait_for_selector("#toast:not([hidden])"); page.evaluate("window.scrollTo(0, 0)")
+    ok, hit = nav_free(page, "Invoices"); check("D12 toast does not cover the nav at 375", ok, f"hit={hit}")
+    tb = page.locator("#toast").bounding_box(); check("D12 toast below the header at 375", tb and tb["y"] >= 60, f"y={tb and tb['y']}")
+    page.screenshot(path=str(OUT / "D12-toast-under-header-375.png"))
+    # D19 long single-word client name
+    page.goto(URL + "#/new"); page.wait_for_selector("#invoice-form"); page.fill("#f-clientName", "A" * 120)
+    w = page.evaluate("document.documentElement.scrollWidth"); check("D19 120-char client name fits at 375", w <= 375, f"scrollWidth={w}")
+    page.emulate_media(media="print"); w = page.evaluate("document.documentElement.scrollWidth"); check("D19 fits in print media at 375", w <= 375, f"scrollWidth={w}"); page.emulate_media(media="screen")
+    # D17 hash navigation right after typing keeps the keystrokes
+    page.fill("#f-clientName", "Quick Co"); page.fill("#item-desc-0", "Work"); page.wait_for_timeout(400)
+    page.type("#item-price-0", "778"); page.evaluate("location.hash = '#/invoices'"); page.wait_for_selector("h1")
+    page.goto(URL + "#/new"); page.wait_for_selector("#invoice-form")
+    check("D17 price kept after instant navigation", page.input_value("#item-price-0") == "778", page.input_value("#item-price-0"))
+    page.click("[data-action=discard-draft]")
+    # D18 save right after typing leaves no stale draft
+    page.fill("#f-clientName", "Fast Co"); page.fill("#item-desc-0", "Work"); page.wait_for_timeout(400)
+    page.type("#item-price-0", "55"); page.click("#invoice-form button[type=submit]"); page.wait_for_selector("#toast:not([hidden])")
+    page.wait_for_timeout(400); page.reload(); page.wait_for_selector("#invoice-form")
+    check("D18 no stale restored notice after fast save", page.locator("#restored-notice").count() == 0)
+    check("375 r2 console clean", not errors, str(errors))
+
+with open_page(1440, 900) as (page, errors):
+    setup(page)
+    # D14 wording with no invoices, D13 draft survives a restore
+    page.goto(URL + "#/new"); page.wait_for_selector("#invoice-form"); page.fill("#f-clientName", "Draft Client"); page.wait_for_timeout(400)
+    page.goto(URL + "#/settings"); page.wait_for_selector("#settings-form")
+    backup = json.dumps({"version": 1, "settings": {"businessName": "Backup Biz", "email": "b@b.test"}, "invoices": [{"id": "bk1", "number": "INV-0009", "status": "sent", "issueDate": "2026-10-01", "dueDate": "2026-10-15", "currency": "USD", "client": {"name": "Old Client", "email": "", "address": ""}, "items": [{"description": "x", "quantity": 1, "unitPrice": 10}], "taxRate": 0, "discount": {"type": "percent", "value": 0}, "notes": "", "createdAt": 1, "updatedAt": 1}]}).encode()
+    page.set_input_files("#f-restore", {"name": "b.json", "mimeType": "application/json", "buffer": backup}); page.wait_for_selector("#confirm-dialog[open]")
+    txt = page.inner_text("#confirm-text"); check("D14 dialog wording without invoices", "and no invoices" in txt and "1 invoice and its settings" in txt, txt)
+    page.click("#confirm-ok"); page.wait_for_selector("#toast:not([hidden])")
+    check("D13 focus on heading after replace", page.evaluate("document.activeElement && document.activeElement.tagName") == "H1")
+    page.goto(URL + "#/new"); page.wait_for_selector("#invoice-form")
+    check("D13 draft survives a restore", page.locator("#restored-notice").count() == 1 and page.input_value("#f-clientName") == "Draft Client")
+    check("1440 r2 console clean", not errors, str(errors))
+
+# D15 storage full: the settings form stays usable after a failed save
+with open_page(1440, 900) as (page, errors):
+    page.add_init_script(quota)
+    page.goto(URL + "#/settings"); page.wait_for_selector("#settings-form")
+    page.fill("#f-businessName", "Full Store Studio"); page.fill("#f-email", "f@s.test"); page.click("#settings-form button[type=submit]"); page.wait_for_timeout(200)
+    check("D15 banner after first failed save", page.is_visible("#banner"))
+    page.click("[data-action=dismiss-banner]"); page.fill("#f-businessName", "Full Store Studio 2"); page.click("#settings-form button[type=submit]"); page.wait_for_timeout(200)
+    check("D15 second save still reacts (banner back)", page.is_visible("#banner"))
+    check("D15 no page error", not [e for e in errors if e[0] == "pageerror"], str(errors))
+
+fails = [k for k, v in results.items() if v.startswith("FAIL")]
+print("\nSUMMARY R2:", f"{len(results) - len(fails)}/{len(results)} pass", ("FAILS: " + ", ".join(fails)) if fails else "")
