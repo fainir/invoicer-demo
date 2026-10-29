@@ -35,6 +35,8 @@ Run: `python3 -m http.server 8080` (then open http://localhost:8080) | Test: `no
 
 Hosting: GitHub Pages from the repo `fainir/invoicer-demo`. The repo starts private; making it public and enabling Pages is the owner's click.
 
+Monthly cost: $0. GitHub Pages and Actions are free for public repositories; the app uses no paid provider, no AI tokens, no email service. Nothing to cap.
+
 ## Data model
 
 All data is in localStorage under the key `invoicer.v1` as one JSON document.
