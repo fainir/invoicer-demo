@@ -34,3 +34,34 @@ Verdict: verified at both widths. Every acceptance point in the row holds. Two m
 - After Save the form re-renders and keyboard focus drops to the page body (document.activeElement is empty), so a keyboard user has to Tab from the top again. Belongs to F7 (keyboard-only).
 - The "Settings saved." toast lives 7 s and survives navigation, so it can still be on screen next to a logo refusal if the user is fast. Not reproducible at human speed in my judgment.
 - Empty required fields show placeholders ("Jane Doe Design", "jane@example.com") in grey while the error says to enter a value; the contrast between placeholder and value is clear in the screenshots.
+
+## Round 2 (2026-10-29, commit d7c91f9)
+
+Re-test after the fixes. Same driver (Playwright through scripts/browser.py, fresh context per scenario, no built-in browser pane), 1440x900 for everything, 375x812 for the Settings form, the logo field and the toast. Fixtures reused from round 1 (logo-ok.png 244 B, logo-big.png 360 KB, notes.txt). Console errors/warnings, page errors and failed requests: none in any scenario at either width.
+
+### Defect re-checks
+
+- D1 fixed (both widths): with the prefix cleared and ACME- typed one key at a time, the grey line read "The next invoice will be 0007." then A0007, AC0007, ACM0007, ACME0007, ACME-0007. Number cleared: ACME-0001. Typing 4 then 2: ACME-0004, ACME-0042. All of this before pressing Save and with nothing in storage. Empty or 0 shows ACME-0001, 12345 shows ACME-12345. After Save the line still read ACME-0042 and #/new said "Will be numbered ACME-0042 when you save." Evidence: 2026-10-29-r2-hint-live-375.png (same text at 1440).
+- D2 fixed (both widths): 360 KB PNG -> red dashed outline on the file input and "That image is 360 KB. Use one under 300 KB so it fits in browser storage." directly under it (message top 683 px, input bottom 679 px at 1440); the pink #form-error box stays hidden; the old logo stays in the preview; the input resets to "No file chosen"; no toast. Save afterwards: "Settings saved.", the message disappears, storage still holds the 350-char logo, focus on Save. notes.txt -> "Choose an image file (PNG, JPG or SVG)." with the same behaviour and Save works. Choosing a good PNG after a refusal clears the message and shows "Logo added. Save settings to keep it." Evidence: 2026-10-29-r2-logo-refused-1440.png, 2026-10-29-r2-logo-refused-375.png.
+- Focus after Save fixed (both widths): after a mouse click on Save, after Enter in the Business name field, and after the save-after-refusal case, document.activeElement is the "Save settings" button (focused: true; no visible ring after a mouse click, as browsers do with :focus-visible).
+
+### Replay of round 1 steps 1-6 (both widths unless noted): same results as round 1
+
+- Fresh /: empty state with the Settings tip, storage absent, scrollWidth = viewport. Settings link -> #/settings, heading "Settings", defaults USD / 0 / INV- / 1, hint INV-0001.
+- Empty submit: both messages, "Fix the 2 highlighted fields to save your settings.", focus on Business name, storage still absent, no toast.
+- nope / 150 / 0: four messages and "Fix the 4 highlighted fields to save your settings."; typing the fixes cleared each message and the summary. Whitespace-only name and "jane @example.com" rejected, nothing stored.
+- Valid save: toast "Settings saved.", reload keeps all seven values including the newline in the address; #/new shows INV-0007, name, both address lines, email, shekel amounts, "Tax (17%)".
+- Logo ok: toast, 200x80 preview, Save -> "Remove logo" button, 350-char data URL, #/new logo 160x64 loaded. Remove logo -> "No logo", Save -> empty logoDataUrl, #/new without img.doc-logo.
+- 1440 only: refresh mid-edit drops the edits silently (as before); two clicks on Save and Enter twice gave one toast, no invoices, nextNumber unchanged, focus on Save; back button returns to #/invoices and the tip is gone once the business is set up.
+
+Toast position: now fixed to the top of the screen (top 12 px once the 200 ms slide-in ends; 185 px wide for "Settings saved.", up to 343 px at 375, never wider than the viewport minus 32 px). At 1440 it sits between the logo and the nav and covers nothing clickable. At 375 see D3.
+
+### Defects
+
+- D3 (new in this build, 375 only, every toast): the toast now sits on top of the header. Right after "Settings saved." a tap at the centre of the Invoices or Settings tab lands on the toast (document.elementFromPoint returns the toast; a Playwright click on the Invoices tab timed out because the toast intercepts it). After "Restored 2 invoices and your settings." (341 px wide) the New invoice button is covered too. It stays for 7 s unless the user taps the x or presses Escape. Repro: at 375 fill the Settings form, tap Save settings, then immediately tap Invoices. Not reproducible at 1440 (toast between the logo and the nav). Evidence: 2026-10-29-r2-toast-over-nav-375.png.
+
+### Verdict
+
+Every F1 acceptance point holds at 1440 and 375; D1 and D2 are fixed and the focus fix works. Verified at 1440. At 375 the only open item is D3, which is shared by every toast in the app.
+
+Observation (not filed): because the toast is fixed to the top, it also overlaps whatever is scrolled under the header (for example the currency select at 375 right after Save). Same root cause as D3.

@@ -16,10 +16,26 @@ Statuses: todo | building (who) | verified | owner | waiting | cut (reason)
 | F1 | First run: I set up my business once (name, address, email, optional logo, default currency and tax rate) and the app remembers it. Missing name or bad email shows an error next to the field; a logo over 300 KB or a non-image is refused with a clear message | web 375 + desktop | todo | | |
 | F2 | I create an invoice: client, line items with quantity and unit price, tax, discount, due date, notes; the number is assigned automatically and the preview updates as I type. Empty client or no valid line shows errors and nothing is saved; a refresh mid-edit restores what I typed | web 375 + desktop | todo | | |
 | F3 | I export the invoice as a PDF through the browser print flow; the printed page shows only the invoice, cleanly laid out, and the suggested filename is the invoice number | web desktop (print) | todo | | |
-| F4 | I see my saved invoices with status draft/sent/paid, change a status, duplicate one, delete one and undo the delete, and search by number or client; an empty list and an empty search both tell me what to do next | web 375 + desktop | todo | | |
+| F4 | I see my saved invoices with status draft/sent/paid, change a status, duplicate one, delete one and undo the delete, and search by number or client; an empty list and an empty search both tell me what to do next | web 375 + desktop | verified | qa/F4/notes.md (54 checks per width, 0 defects) | 2026-10-29 |
 | F5 | I share an invoice: copy a plain-text summary to the clipboard, or open an email draft addressed to the client with the summary in the body | web 375 + desktop | todo | | |
 | F6 | I download a JSON backup of everything, restore it on a fresh browser, and delete all data after a confirmation; a broken backup file is refused with a clear message | web desktop | todo | | |
 | F7 | Edge states: no business set up yet points me to Settings; storage blocked or full shows a plain-words banner and the app keeps working for the session; keyboard-only use reaches every control with a visible focus ring | web 375 + desktop | todo | | |
+
+## Defects (QA round 1, 2026-10-29, all fixed in round 2 commit; re-test pending per flow)
+
+| ID | Defect (user words) | Surface | Status | Evidence |
+|---|---|---|---|---|
+| D1 | F1: the "next invoice will be" hint did not follow the prefix and number I typed until Save | web 375 + desktop | fixed | qa/F1/2026-10-29-05-hint-stale-375.png, re-check scripts/qa-defects.py |
+| D2 | F1: after a refused logo the form said "Fix the highlighted field" although Save worked | web 375 + desktop | fixed | qa/F1/2026-10-29-06-saved-after-refusal-1440.png |
+| D3 | F3: printing with Cmd+P instead of the button suggested "INV-0001 - Invoicer.pdf" as the filename | web desktop (print) | fixed | qa/F3/notes.md |
+| D4 | F6: restoring a backup silently replaced newer invoices with no warning or undo | web desktop | fixed | qa/F6/notes.md, qa/defects/D4-restore-dialog-1440.png |
+| D5 | F6: a stale "Restored" toast stayed on screen while a later bad file was refused | web desktop | fixed | qa/F6/2026-10-29-broken-1440.png |
+| D6 | F5: the toast covered the Copy summary and Email invoice buttons | web 375 + desktop | fixed | qa/F5/2026-10-29-02-copy-toast-1440.png, qa/defects/D6-toast-top-1440.png |
+| D7 | F2: double-clicking Save stored the same new invoice twice as INV-0001 | web 375 + desktop | fixed | qa/F2/2026-10-29-s5-dblclick-1440.png |
+| D8 | F2: a refresh within half a second of typing lost the last keystrokes of the draft | web 375 + desktop | fixed | qa/F2/notes.md |
+| D9 | F7: with storage full, Save gave no visible reaction; the banner sat out of view at the top | web 375 + desktop | fixed | qa/F7/2026-10-29-03-full-375.png, qa/defects/D9-banner-in-view-375.png |
+| D10 | F7: with storage full, a second Save added a duplicate INV-0001 | web 375 + desktop | fixed | qa/F7/2026-10-29-03-full-twice.png |
+| D11 | F7: a $1,250,000.00 total made the editor and the list scroll sideways on a phone | web 375 | fixed | qa/F7/2026-10-29-07-reduced-motion-overflow-375.png, qa/defects/D11-big-total-375.png |
 
 ## Gates
 
@@ -49,3 +65,4 @@ Statuses: todo | building (who) | verified | owner | waiting | cut (reason)
 - 2026-10-29 - built all seven flows (48e85da), 16 unit tests, smoke pass at 375 and 1440 with no console errors
 - 2026-10-29 - UX review: 21 fixes, 1 open row U1 fixed (524f5ab); Lighthouse 99-100 / a11y 100
 - 2026-10-29 - gates: security, performance, UX/UI, legal verified; ops needs the owner's public-repo click
+- 2026-10-29 - QA round 1 (7 agents): F4 verified, F1/F3/F5/F6 verified with minor defects, F2/F7 not verified; 11 defects D1-D11 fixed, re-check 21/21 (scripts/qa-defects.py)
