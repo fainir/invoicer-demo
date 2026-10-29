@@ -25,17 +25,17 @@ Statuses: todo | building (who) | verified | owner | waiting | cut (reason)
 
 | Gate | Status | Evidence |
 |---|---|---|
-| Security: no secrets in repo, no third-party scripts, input validated, no network calls at runtime | todo | |
+| Security: no secrets in repo, no third-party scripts, input validated, no network calls at runtime | verified | qa/gates/security.md (history scan 0 hits, runtime requests = own 6 files only, 16 unit tests on validation) |
 | Data: backup export + one tested restore, delete all data works, privacy note accurate | todo | |
 | Reliability: app loads from a cold cache, storage failures handled, no console errors on any flow | todo | |
-| Performance: Lighthouse on mobile, performance and accessibility at least 90 | todo | |
-| UX/UI: every screen at 375px and desktop, states, contrast, keyboard | todo | |
-| Legal/store: privacy note in the app and README accurate | todo | |
-| Ops: CI green on main, one documented deploy path, rollback (revert + push), README runs in 10 minutes | todo | |
+| Performance: Lighthouse on mobile, performance and accessibility at least 90 | verified | qa/perf/lighthouse.md: list 99/100, editor 99/100, settings 100/100, CLS 0 (2026-10-29) |
+| UX/UI: every screen at 375px and desktop, states, contrast, keyboard | verified | qa/ux/ (21 screenshots, 21 fixes applied, U1 fixed in 524f5ab), Lighthouse accessibility 100 |
+| Legal/store: privacy note in the app and README accurate | verified | privacy.html (reviewed at 375 and 1440: qa/ux/privacy-375.png), README 'Privacy', footer line on every screen |
+| Ops: CI green on main, one documented deploy path, rollback (revert + push), README runs in 10 minutes | owner | qa/gates/ops.md: rollback tried (3240730 reverted by 15f7254), deploy path in README; CI steps pass locally (qa/gates/ci-local.md) but GitHub Actions is blocked on the private repo by the Actions budget - owner action 1 unblocks it |
 
 ## Owner actions
 
-1. (none yet) - format: exact place, exact action, what it unblocks.
+1. GitHub -> https://github.com/fainir/invoicer-demo/settings -> Danger zone: Change visibility to Public, then Pages: Source 'Deploy from a branch', branch main, folder / (root) (or run `bash scripts/enable-pages.sh`) -> unblocks the production URL, the Ops gate (CI runs free on public repos) and the production smoke test
 
 ## Waiting on third parties
 
@@ -46,3 +46,6 @@ Statuses: todo | building (who) | verified | owner | waiting | cut (reason)
 
 - 2026-10-29 - created ledger
 - 2026-10-29 - wrote PRODUCT.md and the flow rows F1-F7
+- 2026-10-29 - built all seven flows (48e85da), 16 unit tests, smoke pass at 375 and 1440 with no console errors
+- 2026-10-29 - UX review: 21 fixes, 1 open row U1 fixed (524f5ab); Lighthouse 99-100 / a11y 100
+- 2026-10-29 - gates: security, performance, UX/UI, legal verified; ops needs the owner's public-repo click
