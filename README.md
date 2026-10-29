@@ -39,3 +39,5 @@ Production URL once enabled: https://fainir.github.io/invoicer-demo/
 ## Privacy
 
 Business details, clients and invoices are stored in the browser's local storage on the user's device only. The app makes no network requests after it loads, sets no cookies and includes no third-party scripts. Backups are plain JSON files the user downloads themselves. See `privacy.html`.
+
+Rollback test marker (this line is reverted in the next commit).
