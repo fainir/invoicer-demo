@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "exportedAt": "2026-10-29T10:40:31.708Z",
+  "settings": {
+    "businessName": "Northwind Studio",
+    "address": "12 Harbor Road\nSeattle, WA 98101",
+    "email": "billing@northwind.test",
+    "logoDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAJUlEQVR42mNgaGigDho1aEAN+k8EGDVo1KBRgyg3aLQ8GvQGAQCVcl5+KH7x4gAAAABJRU5ErkJggg==",
+    "currency": "USD",
+    "taxRate": 10,
+    "invoicePrefix": "NW-",
+    "nextNumber": 102
+  },
+  "invoices": [
+    {
+      "id": "mvtewpc748cymy",
+      "number": "NW-0100",
+      "status": "paid",
+      "issueDate": "2026-10-29",
+      "dueDate": "2026-11-12",
+      "currency": "USD",
+      "client": {
+        "name": "Acme Corp",
+        "email": "ap@acme.test",
+        "address": "1 Main St"
+      },
+      "items": [
+        {
+          "description": "Design work",
+          "quantity": "2",
+          "unitPrice": "150"
+        }
+      ],
+      "taxRate": 10,
+      "discount": {
+        "type": "percent",
+        "value": 0
+      },
+      "notes": "",
+      "createdAt": 1793270423754,
+      "updatedAt": 1793270430059
+    },
+    {
+      "id": "mvtewru7vlhl55",
+      "number": "NW-0101",
+      "status": "sent",
+      "issueDate": "2026-10-29",
+      "dueDate": "2026-11-12",
+      "currency": "USD",
+      "client": {
+        "name": "Beta LLC",
+        "email": "",
+        "address": ""
+      },
+      "items": [
+        {
+          "description": "Consulting",
+          "quantity": "3",
+          "unitPrice": "80"
+        },
+        {
+          "description": "Travel",
+          "quantity": "1",
+          "unitPrice": "45.5"
+        }
+      ],
+      "taxRate": 10,
+      "discount": {
+        "type": "percent",
+        "value": 0
+      },
+      "notes": "",
+      "createdAt": 1793270428837,
+      "updatedAt": 1793270429657
+    }
+  ]
+}

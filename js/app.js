@@ -26,6 +26,7 @@
   var editor = null;      // { id, invoice, errors, restored }
   var settingsForm = null; // { settings, errors, logoError }
   var lastFocusBeforeDialog = null;
+  var bannerJustShown = false;
 
   /* ---------- persistence, banner, toast ---------- */
 
@@ -42,6 +43,9 @@
   function showBanner(msg) {
     bannerEl.innerHTML = '<p>' + esc(msg) + '</p><button type="button" class="btn btn-ghost btn-small" data-action="dismiss-banner">Dismiss</button>';
     bannerEl.hidden = false;
+    bannerJustShown = true;
+    bannerEl.scrollIntoView({ block: 'start', behavior: 'instant' });
+    bannerEl.focus();
   }
   function hideBanner() { bannerEl.hidden = true; bannerEl.innerHTML = ''; }
 
@@ -91,9 +95,11 @@
     else renderInvoices();
     if (!firstRender) {
       var h = $('h1', main);
-      if (h) h.focus();
-      window.scrollTo(0, 0);
+      if (!bannerEl.hidden && bannerJustShown) bannerEl.focus();
+      else if (h) h.focus();
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
+    bannerJustShown = false;
     firstRender = false;
   }
 
@@ -423,11 +429,11 @@
         (inv.client.address ? '<br>' + nl2br(inv.client.address) : '') +
         (inv.client.email ? '<br>' + esc(inv.client.email) : '') +
       '</p></section>' +
-      '<table class="doc-items"><thead><tr><th scope="col">Description</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Unit price</th><th scope="col" class="num">Amount</th></tr></thead><tbody>' +
+      '<div class="doc-items-wrap"><table class="doc-items"><thead><tr><th scope="col">Description</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Unit price</th><th scope="col" class="num">Amount</th></tr></thead><tbody>' +
         (items.length ? items.map(function (it) {
           return '<tr><td>' + esc(it.description || '-') + '</td><td class="num">' + esc(Calc.toNumber(it.quantity)) + '</td><td class="num">' + esc(money(it.unitPrice, cur)) + '</td><td class="num">' + esc(money(Calc.lineTotal(it), cur)) + '</td></tr>';
         }).join('') : '<tr><td colspan="4" class="doc-empty">No line items yet</td></tr>') +
-      '</tbody></table>' +
+      '</tbody></table></div>' +
       '<div class="doc-totals"><dl>' +
         '<div><dt>Subtotal</dt><dd>' + esc(money(t.subtotal, cur)) + '</dd></div>' +
         (t.discount > 0 ? '<div><dt>' + esc(t.discountLabel) + '</dt><dd>-' + esc(money(t.discount, cur)) + '</dd></div>' : '') +
@@ -464,14 +470,18 @@
     }
   }
 
+  function saveDraftNow() {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    if (!editor) return;
+    state.draft = { forId: editor.id, invoice: Calc.deepCopy(editor.invoice), savedAt: Date.now() };
+    persist();
+  }
   function scheduleDraftSave() {
     clearTimeout(draftTimer);
-    draftTimer = setTimeout(function () {
-      if (!editor) return;
-      state.draft = { forId: editor.id, invoice: Calc.deepCopy(editor.invoice), savedAt: Date.now() };
-      persist();
-    }, 400);
+    draftTimer = setTimeout(saveDraftNow, 250);
   }
+  window.addEventListener('pagehide', function () { if (draftTimer) saveDraftNow(); });
 
   function setFieldError(id, msg) {
     var input = $('#' + id);
@@ -528,7 +538,7 @@
     inv.client.name = inv.client.name.trim();
     inv.client.email = inv.client.email.trim();
     var now = Date.now();
-    var existing = editor.id ? findInvoice(editor.id) : null;
+    var existing = findInvoice(editor.id || inv.id);
     if (existing) {
       inv.status = existing.status;
       inv.createdAt = existing.createdAt;
@@ -542,21 +552,30 @@
     }
     state.draft = null;
     clearTimeout(draftTimer);
+    editor.id = inv.id;
     var saved = persist();
-    if (!saved) return;
-    toast('Saved ' + inv.number + '.');
+    if (saved) toast('Saved ' + inv.number + '.');
     if (existing) render();
     else location.replace('#/edit/' + inv.id);
   }
 
+  var titleBeforePrint = null;
+  function setPrintTitle() {
+    if (!editor || titleBeforePrint !== null) return;
+    titleBeforePrint = document.title;
+    document.title = Calc.displayNumber(editor.invoice, state.settings);
+  }
+  function restorePrintTitle() {
+    if (titleBeforePrint === null) return;
+    document.title = titleBeforePrint;
+    titleBeforePrint = null;
+  }
+  window.addEventListener('beforeprint', setPrintTitle);
+  window.addEventListener('afterprint', restorePrintTitle);
   function printInvoice() {
-    var number = Calc.displayNumber(editor.invoice, state.settings);
-    var old = document.title;
-    document.title = number;
-    var restore = function () { document.title = old; window.removeEventListener('afterprint', restore); };
-    window.addEventListener('afterprint', restore);
+    setPrintTitle();
     window.print();
-    setTimeout(restore, 2000);
+    setTimeout(restorePrintTitle, 2000);
   }
 
   function copyText(text) {
@@ -656,13 +675,15 @@
       case 'invoicePrefix': s.invoicePrefix = target.value; break;
       case 'nextNumber': s.nextNumber = target.value; break;
     }
+    var hint = $('#f-nextNumber-hint');
+    if (hint) hint.textContent = 'The next invoice will be ' + Calc.formatNumber(s.invoicePrefix, s.nextNumber) + '.';
   }
 
   function showSettingsErrors() {
     var e = settingsForm.errors || {};
     ['businessName', 'email', 'taxRate', 'currency', 'invoicePrefix', 'nextNumber'].forEach(function (k) { setFieldError('f-' + k, e[k]); });
     setFieldError('f-logo', settingsForm.logoError);
-    var count = Object.keys(e).length + (settingsForm.logoError ? 1 : 0);
+    var count = Object.keys(e).length;
     var formErr = $('#form-error');
     if (formErr) {
       formErr.textContent = count ? 'Fix the ' + (count === 1 ? 'highlighted field' : count + ' highlighted fields') + ' to save your settings.' : '';
@@ -719,7 +740,12 @@
       nextNumber: parseInt(s.nextNumber, 10)
     };
     settingsForm = null;
-    if (persist()) { toast('Settings saved.'); renderSettings(); }
+    if (persist()) {
+      toast('Settings saved.');
+      renderSettings();
+      var saveBtn = $('#settings-form button[type=submit]');
+      if (saveBtn) saveBtn.focus();
+    }
   }
 
   function exportBackup() {
@@ -736,20 +762,25 @@
     toast('Backup downloaded: ' + a.download);
   }
 
+  function applyBackup(data) {
+    state = data;
+    settingsForm = null;
+    pendingDelete = null;
+    if (persist()) {
+      renderSettings();
+      toast('Restored ' + data.invoices.length + (data.invoices.length === 1 ? ' invoice' : ' invoices') + ' and your settings.');
+    }
+  }
   function restoreBackup(input) {
     var file = input.files && input.files[0];
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function () {
       var err = $('#f-restore-err');
+      hideToast();
+      var data;
       try {
-        var data = Calc.parseBackup(String(reader.result));
-        state = data;
-        settingsForm = null;
-        if (persist()) {
-          renderSettings();
-          toast('Restored ' + data.invoices.length + (data.invoices.length === 1 ? ' invoice' : ' invoices') + ' and your settings.');
-        }
+        data = Calc.parseBackup(String(reader.result));
       } catch (e) {
         input.value = '';
         input.setAttribute('aria-invalid', 'true');
@@ -757,17 +788,44 @@
           err.textContent = e.message === 'not-json' ? 'That file is not readable as JSON. Choose a backup downloaded from Invoicer.' : 'That file is not an Invoicer backup.';
           err.hidden = false;
         }
+        return;
+      }
+      input.value = '';
+      input.removeAttribute('aria-invalid');
+      if (err) { err.textContent = ''; err.hidden = true; }
+      var n = state.invoices.length;
+      if (n || businessSetUp()) {
+        openDialog({
+          title: 'Replace your current data?',
+          text: 'Restoring this backup replaces your settings' + (n ? ' and the ' + n + (n === 1 ? ' invoice' : ' invoices') + ' in this browser' : '') + ' with the ' + data.invoices.length + (data.invoices.length === 1 ? ' invoice' : ' invoices') + ' in the file. Download a backup of the current data first if you might need it.',
+          confirmLabel: 'Replace with the backup',
+          trigger: input
+        }, function () { applyBackup(data); });
+      } else {
+        applyBackup(data);
       }
     };
     reader.readAsText(file);
   }
 
-  function confirmDeleteAll(trigger) {
-    lastFocusBeforeDialog = trigger;
-    var n = state.invoices.length;
-    $('#confirm-text').textContent = 'This removes your business details' + (n ? ' and all ' + n + (n === 1 ? ' invoice' : ' invoices') : '') + ' from this browser. Download a backup first if you might need them.';
+  var dialogOnConfirm = null;
+  function openDialog(o, onConfirm) {
+    lastFocusBeforeDialog = o.trigger || null;
+    dialogOnConfirm = onConfirm;
+    $('#confirm-title').textContent = o.title;
+    $('#confirm-text').textContent = o.text;
+    $('#confirm-ok').textContent = o.confirmLabel;
     if (typeof dialog.showModal === 'function') dialog.showModal();
-    else if (window.confirm('Delete all Invoicer data from this browser?')) deleteAll();
+    else if (window.confirm(o.title + ' ' + o.text)) { dialogOnConfirm = null; onConfirm(); }
+  }
+  function confirmDeleteAll(trigger) {
+    var n = state.invoices.length;
+    openDialog({
+      title: 'Delete all data?',
+      text: 'This removes your business details' + (n ? ' and all ' + n + (n === 1 ? ' invoice' : ' invoices') : '') + ' from this browser. Download a backup first if you might need them.',
+      confirmLabel: 'Delete everything',
+      trigger: trigger
+    }, deleteAll);
   }
   function deleteAll() {
     Store.clear();
@@ -780,9 +838,12 @@
   }
   if (dialog) {
     dialog.addEventListener('close', function () {
-      if (dialog.returnValue === 'confirm') deleteAll();
+      var cb = dialogOnConfirm;
+      dialogOnConfirm = null;
+      if (dialog.returnValue === 'confirm' && cb) cb();
       if (lastFocusBeforeDialog && document.contains(lastFocusBeforeDialog)) lastFocusBeforeDialog.focus();
       lastFocusBeforeDialog = null;
+      dialog.returnValue = '';
     });
   }
 
@@ -849,7 +910,7 @@
 
   document.addEventListener('input', function (ev) {
     var t = ev.target;
-    if (t.id === 'search') { searchQuery = t.value; renderInvoiceRows(); return; }
+    if (t.id === 'search') { searchQuery = t.value.trim() ? t.value : ''; renderInvoiceRows(); return; }
     if (editor && t.closest('#invoice-form')) {
       readEditorField(t);
       renderPreview();
