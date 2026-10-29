@@ -76,3 +76,4 @@ Statuses: todo | building (who) | verified | owner | waiting | cut (reason)
 - 2026-10-29 - QA round 1 (7 agents): F4 verified, F1/F3/F5/F6 verified with minor defects, F2/F7 not verified; 11 defects D1-D11 fixed, re-check 21/21 (scripts/qa-defects.py)
 - 2026-10-29 - QA round 2 (4 agents): D1-D11 confirmed fixed, 8 more defects D12-D19 found and fixed, re-check 35/35; final regression fcbea22: all 7 flows verified, data and reliability gates verified
 - 2026-10-29 - done except the owner's click: make the repo public and enable Pages
+- 2026-10-29 - owner said "do what is needed": repo made public, Pages enabled (https://fainir.github.io/invoicer-demo/), production smoke test next
