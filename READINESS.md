@@ -7,7 +7,7 @@ Statuses: todo | building (who) | verified | owner | waiting | cut (reason)
 
 | Surface | Production URL / store / channel | Run | Test | Deploy |
 |---|---|---|---|---|
-| Web (static, localStorage) | https://fainir.github.io/invoicer-demo/ (after the owner enables Pages) | `python3 -m http.server 8080` | `node --test tests/` | push to `main`; Pages serves the repo root |
+| Web (static, localStorage) | https://fainir.github.io/invoicer-demo/ (after the owner enables Pages) | `python3 -m http.server 8080` | `node --test tests/*.test.js` | push to `main`; Pages serves the repo root |
 
 ## Flows
 

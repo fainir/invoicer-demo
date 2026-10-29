@@ -1,0 +1,20 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: for f in js/*.js; do node --check "$f"; done
+      - name: Unit tests
+        run: node --test tests/*.test.js
+      - name: No network calls or third-party scripts
+        run: |
+          ! grep -nE 'https?://' index.html js/*.js css/*.css | grep -vE 'github.com/fainir/invoicer-demo|www.w3.org/2000/svg' || (echo "unexpected external URL" && exit 1)

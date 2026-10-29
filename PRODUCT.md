@@ -31,7 +31,7 @@ Invoices marked "sent" per week by the owner (readable in the app's list). A sec
 
 Static web app: HTML, CSS and vanilla JavaScript, no build step, no dependencies, no network calls at runtime. Fonts come from the system because the app makes no network requests.
 
-Run: `python3 -m http.server 8080` (then open http://localhost:8080) | Test: `node --test tests/` | Deploy: push to `main`; GitHub Pages serves the repository root (see README "Deploy").
+Run: `python3 -m http.server 8080` (then open http://localhost:8080) | Test: `node --test tests/*.test.js` | Deploy: push to `main`; GitHub Pages serves the repository root (see README "Deploy").
 
 Hosting: GitHub Pages from the repo `fainir/invoicer-demo`. The repo starts private; making it public and enabling Pages is the owner's click.
 
